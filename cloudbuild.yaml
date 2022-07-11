@@ -1,9 +1,9 @@
 steps:
 - name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-t', 'us-central1-docker.pkg.dev/fresh-replica-355617/plantmon/prometheus', '.' ]
+  args: [ 'build', '-t', 'us-central1-docker.pkg.dev/$_PROJECT_ID/plantmon/prometheus', '.' ]
   dir: '/prometheus/'
   id: 'prometheus_build'
   waitFor: ['-']
 
 images:
-  - 'us-central1-docker.pkg.dev/fresh-replica-355617/plantmon/prometheus'
+  - 'us-central1-docker.pkg.dev/$_PROJECT_ID/plantmon/prometheus'
