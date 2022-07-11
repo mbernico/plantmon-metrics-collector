@@ -13,13 +13,14 @@ steps:
   id: 'prometheus_push'
   waitFor: ['prometheus_build']
 
-# Deploy Grafana to cloud run
+# Deploy prometheus to cloud run
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: gcloud
   args: ['run', 
          'deploy', 'grafana', 
-         '--image', 'us-central1-docker.pkg.dev/$_PROJECT_ID/plantmon/grafana:latest',
-         '--region', 'us-central1']
+         '--image', 'us-central1-docker.pkg.dev/$_PROJECT_ID/plantmon/prometheus:latest',
+         '--region', 'us-central1',
+         '--port', '9090']
   id: 'deploy_prometheus'
   waitFor: ['prometheus_push']
 
@@ -42,6 +43,7 @@ steps:
   args: ['run', 
          'deploy', 'grafana', 
          '--image', 'us-central1-docker.pkg.dev/$_PROJECT_ID/plantmon/grafana:latest',
-         '--region', 'us-central1']
+         '--region', 'us-central1',
+         '--port', '3000']
   id: 'deploy_grafana'
   waitFor: ['grafana_push']
