@@ -17,7 +17,7 @@ steps:
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: gcloud
   args: ['run', 
-         'deploy', 'grafana', 
+         'deploy', 'prometheus', 
          '--image', 'us-central1-docker.pkg.dev/$_PROJECT_ID/plantmon/prometheus:latest',
          '--region', 'us-central1',
          '--port', '9090']
