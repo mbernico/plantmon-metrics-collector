@@ -7,10 +7,21 @@ steps:
   id: 'prometheus_build'
   waitFor: ['-']
 
+# Push Prometheus
 - name: 'gcr.io/cloud-builders/docker'
   args: ['push', 'us-central1-docker.pkg.dev/$_PROJECT_ID/plantmon/prometheus:latest']
   id: 'prometheus_push'
   waitFor: ['prometheus_build']
+
+# Deploy Grafana to cloud run
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args: ['run', 
+         'deploy', 'grafana', 
+         '--image', 'us-central1-docker.pkg.dev/$_PROJECT_ID/plantmon/grafana:latest',
+         '--region', 'us-central1']
+  id: 'deploy_prometheus'
+  waitFor: ['prometheus_push']
 
 # Buid Grafana
 - name: 'gcr.io/cloud-builders/docker'
@@ -19,7 +30,18 @@ steps:
   id: 'grafana_build'
   waitFor: ['-']
 
+# Push Grafana
 - name: 'gcr.io/cloud-builders/docker'
   args: ['push', 'us-central1-docker.pkg.dev/$_PROJECT_ID/plantmon/grafana:latest']
   id: 'grafana_push'
   waitFor: ['grafana_build']
+
+# Deploy Grafana to cloud run
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args: ['run', 
+         'deploy', 'grafana', 
+         '--image', 'us-central1-docker.pkg.dev/$_PROJECT_ID/plantmon/grafana:latest',
+         '--region', 'us-central1']
+  id: 'deploy_grafana'
+  waitFor: ['grafana_push']
