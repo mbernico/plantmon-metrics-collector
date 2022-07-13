@@ -26,6 +26,7 @@ def index():
 
   for key, value in envelope.items():
     logging.debug('Envelope keys')
+    value = base64.b64decode(value).decode("utf-8").strip()
     logging.debug(key, value)
 
   for key, value in pubsub_message.items():
