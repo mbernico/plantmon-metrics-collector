@@ -24,19 +24,14 @@ def index():
     logging.ERROR(msg)
     return f'Bad Request: {msg}', 400
 
-  for key, value in envelope.items():
-    logging.debug('Envelope keys')
-    # if not isinstance(value, dict):
-    #   value = base64.b64decode(value).decode("utf-8").strip()
-    logging.debug(key, value)
+  device_id = pubsub_message['attributes']['deviceId']
+  logging.debug(f'DeviceId: {device_id}')
 
-  for key, value in pubsub_message.items():
-    logging.debug('message keys')
-    # if not isinstance(value, dict):
-    #   value = base64.b64decode(value).decode("utf-8").strip()
-    logging.debug(key, value)
-    #  base64.b64decode().decode("utf-8").strip()
+  publish_time = pubsub_message['publishTime']
+  logging.debug(f'Publish Time: {publish_time}')
 
+  data = base64.b64decode(pubsub_message["data"]).decode("utf-8").strip()
+  logging.debug(f'Data: {data}')
 
 if __name__ == '__main__':
     PORT = int(os.getenv('PORT', 8080))
