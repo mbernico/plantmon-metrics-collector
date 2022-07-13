@@ -3,11 +3,14 @@ import base64
 import json
 import os
 import logging
+import requests
 
 from flask import Flask, request, jsonify
 from google.cloud import bigquery
 
-TABLE_ID = 'fresh-replica-355617.plantmon.telemetry'
+WEATHER_URL = 'https://api.openweathermap.org/data/2.5/weather'
+LAT = '41.886260'
+LON = '-87.776760'
 
 client = bigquery.Client()
 
@@ -16,41 +19,50 @@ logger.setLevel(os.getenv('LOG_LEVEL', 'DEBUG'))
 
 app = Flask(__name__)
 
-def write_row_to_bq(
-    device_id: str,
-    data: Dict,
-    temperature: float, 
-    humidity: float,
-    publish_time: str,
-    pressure: float,
-    wind_speed: float,
-    weather_description: str) -> int: 
+def write_row_to_bq(device_data: Dict, weather_data: Dict) -> int:
   """Writes data to bq.
   
   Returns: -1 for errors, else 0.
   """
-  row = [{
-    'device_id': device_id, 
-    'moisture_pct': float(data['MoisturePct']), 
-    'moisture_value': float(data['MoistureVal']), 
-    'temperature': temperature, 
-    'humidity': humidity,
-    'timestamp': publish_time,
-    'pressure': pressure,
-    'wind_speed': wind_speed,
-    'weather_description': weather_description}]
+  row = [
+    {
+    'device_id': device_data['device_id'], 
+    'moisture_pct': device_data['moisture_pct'], 
+    'moisture_value': device_data['moisture_value'],
+    'temperature': weather_data['temperature'],
+    'humidity': weather_data['humidity'],
+    'timestamp': device_data['publish_time'],
+    'pressure': weather_data['pressure'],
+    'wind_speed': weather_data['wind_speed'],
+    'weather_description': weather_data['weather_description']
+    }
+  ]
 
   errors = client.insert_rows_json(os.getenv('TABLE_ID'), row)
   if errors == []:
     logging.debug("New rows have been added.")
     return -1
   else:
-   logging.debug("Encountered errors while inserting rows: {}".format(errors))
-   return 0
+    logging.debug("Encountered errors while inserting rows: {}".format(errors))
+    return 0
+
+def get_weather():
+  """Gets current weather"""
+  weather_api_key = os.getenv('WEATHER_API_KEY')
+  url = f'{WEATHER_URL}?lat={LAT}&lon={LON}&units=metric&appid={weather_api_key}'
+  r = requests.get(url)
+  data = r.json()
+  return {
+    'temperature': float(data['main']['temp']),
+    'humidity': float(data['main']['humidity']),
+    'pressure': float(data['main']['pressure']),
+    'wind_speed': float(data['wind']['speed']),
+    'weather_description': str(data['weather']['description'])
+  }
+
 
 @app.route('/', methods=['POST'])
 def index():
-
   envelope = request.get_json()
   try:
     pubsub_message = envelope['message']
@@ -63,25 +75,18 @@ def index():
     logging.ERROR(msg)
     return f'Bad Request: {msg}', 500
 
-  device_id = pubsub_message['attributes']['deviceId']
-  logging.debug(f'DeviceId: {device_id}')
-
-  publish_time = pubsub_message['publishTime']
-  logging.debug(f'Publish Time: {publish_time}')
-
-  # Data will be a JSON string.
+  # Convert data to a JSON string, then a dict.
   data = base64.b64decode(pubsub_message["data"]).decode("utf-8").strip()
-  logging.debug(f'Data: {data}')
   data = json.loads(data)
 
-  temperature = -1
-  humidity = -1
-  pressure = -1
-  wind_speed = -1
-  weather_description = ""
-
-  errors = write_row_to_bq(device_id, data, temperature, humidity,
-      publish_time, pressure, wind_speed, weather_description)
+  device_data = {
+      'device_id': str(pubsub_message['attributes']['deviceId']),
+      'publish_time': str(pubsub_message['publishTime']),
+      'moisture_pct': float(data['MoisturePct']),
+      'moisture_value': float(data['MoistureVal'])
+  }
+  weather_data = get_weather()
+  errors = write_row_to_bq(device_data, weather_data)
 
   if errors:
     return jsonify(success=False)
