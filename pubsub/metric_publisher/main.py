@@ -57,7 +57,7 @@ def get_weather():
     'humidity': float(data['main']['humidity']),
     'pressure': float(data['main']['pressure']),
     'wind_speed': float(data['wind']['speed']),
-    'weather_description': str(data['weather']['description'])
+    'weather_description': str(data['weather'][0]['description'])
   }
 
 
@@ -79,9 +79,10 @@ def index():
   data = base64.b64decode(pubsub_message['data']).decode('utf-8').strip()
   try:
     data = json.loads(data)
-  except:
-    print('failed to jsonify data')
-    print(data)
+  except json.JSONDecodeError:
+    logging.warn('Empty JSON, not a weather message?')
+    # ignore and move on.
+    return jsonify(success=True)
 
   device_data = {
       'device_id': str(pubsub_message['attributes']['deviceId']),
