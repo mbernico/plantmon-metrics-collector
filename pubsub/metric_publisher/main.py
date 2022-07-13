@@ -1,3 +1,4 @@
+from typing import Dict
 import base64
 import json
 import os
@@ -15,6 +16,38 @@ logger.setLevel(os.getenv('LOG_LEVEL', 'DEBUG'))
 
 app = Flask(__name__)
 
+def write_row_to_bq(
+    device_id: str,
+    data: Dict,
+    temperature: float, 
+    humidity: float,
+    publish_time: str,
+    pressure: float,
+    wind_speed: float,
+    weather_description: str) -> int: 
+  """Writes data to bq.
+  
+  Returns: -1 for errors, else 0.
+  """
+  row = [{
+    'device_id': device_id, 
+    'moisture_pct': float(data['MoisturePct']), 
+    'moisture_value': float(data['MoistureVal']), 
+    'temperature': temperature, 
+    'humidity': humidity,
+    'timestamp': publish_time,
+    'pressure': pressure,
+    'wind_speed': wind_speed,
+    'weather_description': weather_description}]
+
+  errors = client.insert_rows_json(TABLE_ID, row)  # Make an API request.
+  if errors == []:
+    logging.debug("New rows have been added.")
+    return -1
+  else:
+   logging.debug("Encountered errors while inserting rows: {}".format(errors))
+   return 0
+
 @app.route('/', methods=['POST'])
 def index():
 
@@ -24,11 +57,11 @@ def index():
   except TypeError:
     msg = 'Message not contained in envelope.'
     logging.ERROR(msg)
-    return f'Bad Request: {msg}', 400
+    return f'Bad Request: {msg}', 500
   except KeyError:
     msg = 'Key error in envelope.'
     logging.ERROR(msg)
-    return f'Bad Request: {msg}', 400
+    return f'Bad Request: {msg}', 500
 
   device_id = pubsub_message['attributes']['deviceId']
   logging.debug(f'DeviceId: {device_id}')
@@ -43,23 +76,17 @@ def index():
 
   temperature = -1
   humidity = -1
+  pressure = -1
+  wind_speed = -1
+  weather_description = ""
 
-  row = [{
-      'device_id': device_id, 
-      'moisture_pct': float(data['moisture_pct']), 
-      'moisture_value': float(data['moisture_value']), 
-      'temperature': temperature, 
-      'humidity': humidity,
-      'timestamp': publish_time}]
+  errors = write_row_to_bq(device_id, data, temperature, humidity,
+      publish_time, pressure, wind_speed, weather_description)
 
-  errors = client.insert_rows_json(TABLE_ID, row)  # Make an API request.
-  if errors == []:
-    logging.debug("New rows have been added.")
+  if errors:
+    return jsonify(success=False)
   else:
-   logging.debug("Encountered errors while inserting rows: {}".format(errors))
-
-  resp = jsonify(success=True)
-  return resp
+    return 'BQ Write Failure', 500
 
 if __name__ == '__main__':
     PORT = int(os.getenv('PORT', 8080))
