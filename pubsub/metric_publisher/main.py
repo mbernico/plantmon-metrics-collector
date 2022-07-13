@@ -40,7 +40,7 @@ def write_row_to_bq(
     'wind_speed': wind_speed,
     'weather_description': weather_description}]
 
-  errors = client.insert_rows_json(TABLE_ID, row)  # Make an API request.
+  errors = client.insert_rows_json(os.getenv('TABLE_ID'), row)
   if errors == []:
     logging.debug("New rows have been added.")
     return -1
