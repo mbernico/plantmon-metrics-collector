@@ -24,11 +24,11 @@ def index():
     logging.ERROR(msg)
     return f'Bad Request: {msg}', 400
 
-  for key, value in envelope:
+  for key, value in envelope.items():
     logging.debug('Envelope keys')
     logging.debug(key, value)
 
-  for key, value in pubsub_message:
+  for key, value in pubsub_message.items():
     logging.debug('message keys')
     value = base64.b64decode(value).decode("utf-8").strip()
     logging.debug(key, value)
