@@ -76,8 +76,12 @@ def index():
     return f'Bad Request: {msg}', 500
 
   # Convert data to a JSON string, then a dict.
-  data = base64.b64decode(pubsub_message["data"]).decode("utf-8").strip()
-  data = json.loads(data)
+  data = base64.b64decode(pubsub_message['data']).decode('utf-8').strip()
+  try:
+    data = json.loads(data)
+  except:
+    print('failed to jsonify data')
+    print(data)
 
   device_data = {
       'device_id': str(pubsub_message['attributes']['deviceId']),
