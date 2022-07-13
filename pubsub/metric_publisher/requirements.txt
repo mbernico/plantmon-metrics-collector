@@ -2,3 +2,4 @@ Flask
 pytest
 pytest
 gunicorn
+google-cloud-bigquery
